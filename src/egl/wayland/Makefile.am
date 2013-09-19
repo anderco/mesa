@@ -1,1 +1,1 @@
-SUBDIRS = wayland-drm wayland-egl
+SUBDIRS = wayland-egl

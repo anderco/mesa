@@ -2000,7 +2000,6 @@ AC_CONFIG_FILES([Makefile
 		src/egl/main/Makefile
 		src/egl/main/egl.pc
 		src/egl/wayland/Makefile
-		src/egl/wayland/wayland-drm/Makefile
 		src/egl/wayland/wayland-egl/Makefile
 		src/egl/wayland/wayland-egl/wayland-egl.pc
 		src/gallium/auxiliary/Makefile
@@ -2087,6 +2086,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/winsys/sw/wrapper/Makefile
 		src/gallium/winsys/sw/xlib/Makefile
 		src/gbm/Makefile
+		src/gbm/wayland-drm/Makefile
 		src/gbm/main/gbm.pc
 		src/glsl/Makefile
 		src/glx/Makefile

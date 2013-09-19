@@ -1,3 +1,5 @@
+SUBDIRS = wayland-drm
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = main/gbm.pc
 
@@ -23,8 +25,10 @@ libgbm_la_LIBADD = $(LIBUDEV_LIBS) $(LIBKMS_LIBS) $(DLOPEN_LIBS)
 
 if HAVE_EGL_PLATFORM_WAYLAND
 AM_CPPFLAGS = -DHAVE_WAYLAND_PLATFORM
-AM_CFLAGS += $(WAYLAND_CFLAGS)
-libgbm_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la $(WAYLAND_LIBS)
+AM_CFLAGS += \
+	$(WAYLAND_CFLAGS) \
+	-I$(top_srcdir)/src/gbm/wayland-drm
+libgbm_la_LIBADD += $(top_builddir)/src/gbm/wayland-drm/libwayland-drm.la $(WAYLAND_LIBS)
 endif
 
 if HAVE_DRI

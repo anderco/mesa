@@ -24,9 +24,9 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/src/egl/main \
 	-I$(top_srcdir)/src/gbm/main \
 	-I$(top_srcdir)/src/gbm/backends/dri \
+	-I$(top_srcdir)/src/gbm/wayland-drm \
 	-I$(top_srcdir)/src/egl/wayland/wayland-egl \
-	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
-	-I$(top_builddir)/src/egl/wayland/wayland-drm \
+	-I$(top_builddir)/src/gbm/wayland-drm \
 	$(DEFINES) \
 	$(VISIBILITY_CFLAGS) \
 	$(LIBDRM_CFLAGS) \

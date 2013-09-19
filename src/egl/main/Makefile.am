@@ -86,7 +86,7 @@ AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM
 AM_CFLAGS += $(WAYLAND_CFLAGS)
 libEGL_la_LIBADD += $(WAYLAND_LIBS)
 libEGL_la_LIBADD += $(LIBDRM_LIBS)
-libEGL_la_LIBADD += ../wayland/wayland-drm/libwayland-drm.la
+libEGL_la_LIBADD += ../../gbm/libgbm.la
 endif
 
 if HAVE_EGL_PLATFORM_DRM
