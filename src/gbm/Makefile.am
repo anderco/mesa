@@ -42,6 +42,18 @@ libgbm_la_LIBADD += \
 	libgbm_dri.la $(top_builddir)/src/mapi/shared-glapi/libglapi.la $(LIBDRM_LIBS)
 endif
 
+if HAVE_I965_DRI
+noinst_LTLIBRARIES = libgbm_intel.la
+libgbm_intel_la_SOURCES = \
+	backends/intel/gbm_intel.c
+
+libgbm_intel_la_CFLAGS = \
+	$(AM_CFLAGS) $(INTEL_CFLAGS)
+
+libgbm_la_LIBADD += \
+	libgbm_intel.la $(INTEL_LIBS)
+endif
+
 all-local: libgbm.la
 	$(MKDIR_P) $(top_builddir)/$(LIB_DIR);
 	ln -f .libs/libgbm.so.1.0.0 $(top_builddir)/$(LIB_DIR)/libgbm.so
