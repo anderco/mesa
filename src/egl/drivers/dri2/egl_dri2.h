@@ -183,7 +183,11 @@ struct dri2_egl_surface
    struct gbm_dri_surface *gbm_dri_surf;
 #endif
 
-#if defined(HAVE_WAYLAND_PLATFORM) || defined(HAVE_DRM_PLATFORM)
+#ifdef HAVE_GBM_PLATFORM
+   struct gbm_surface *gbm_surf;
+#endif
+
+#if defined(HAVE_WAYLAND_PLATFORM) || defined(HAVE_DRM_PLATFORM) || defined(HAVE_GBM_PLATFORM)
    __DRIbuffer           *dri_buffers[__DRI_BUFFER_COUNT];
    struct {
 #ifdef HAVE_WAYLAND_PLATFORM
@@ -191,7 +195,7 @@ struct dri2_egl_surface
       __DRIimage         *dri_image;
       int                 pitch, name;
 #endif
-#ifdef HAVE_DRM_PLATFORM
+#if defined(HAVE_DRM_PLATFORM) || defined(HAVE_GBM_PLATFORM)
       struct gbm_bo       *bo;
 #endif
       int                 locked;
@@ -260,6 +264,9 @@ dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp);
 
 EGLBoolean
 dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp);
+
+EGLBoolean
+dri2_initialize_gbm(_EGLDriver *drv, _EGLDisplay *disp);
 
 EGLBoolean
 dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp);

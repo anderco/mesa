@@ -1442,9 +1442,9 @@ for plat in $egl_platforms; do
                 fi
 		;;
 
-	drm)
+	drm|gbm)
 		test "x$enable_gbm" = "xno" &&
-			AC_MSG_ERROR([EGL platform drm needs gbm])
+			AC_MSG_ERROR([EGL platform '$plat' needs gbm])
 		;;
 
 	android|fbdev|gdi|null)
@@ -1478,6 +1478,7 @@ AM_CONDITIONAL(HAVE_EGL_PLATFORM_WAYLAND, echo "$egl_platforms" | grep 'wayland'
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep 'drm' >/dev/null 2>&1)
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_FBDEV, echo "$egl_platforms" | grep 'fbdev' >/dev/null 2>&1)
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_NULL, echo "$egl_platforms" | grep 'null' >/dev/null 2>&1)
+AM_CONDITIONAL(HAVE_EGL_PLATFORM_GBM, echo "$egl_platforms" | grep 'gbm' >/dev/null 2>&1)
 
 AM_CONDITIONAL(HAVE_EGL_DRIVER_DRI2, test "x$HAVE_EGL_DRIVER_DRI2" != "x")
 AM_CONDITIONAL(HAVE_EGL_DRIVER_GLX, test "x$HAVE_EGL_DRIVER_GLX" != "x")

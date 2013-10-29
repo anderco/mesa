@@ -340,12 +340,13 @@ gbm_bo_create(struct gbm_device *gbm,
  * Create a gbm buffer object from an foreign object
  *
  * This function imports a foreign object and creates a new gbm bo for it.
- * This enabled using the foreign object with a display API such as KMS.
- * Currently two types of foreign objects are supported, indicated by the type
- * argument:
+ * This enables using the foreign object with a display API such as KMS.
+ * Currently the following types of foreign objects are supported, indicated
+ * by the type argument:
  *
  *   GBM_BO_IMPORT_WL_BUFFER
  *   GBM_BO_IMPORT_EGL_IMAGE
+ *   GBM_BO_IMPORT_GEM_NAME
  *
  * The the gbm bo shares the underlying pixels but its life-time is
  * independent of the foreign object.
@@ -365,6 +366,28 @@ gbm_bo_import(struct gbm_device *gbm,
               uint32_t type, void *buffer, uint32_t usage)
 {
    return gbm->bo_import(gbm, type, buffer, usage);
+}
+
+/**
+ * Create a foreign object from a gbm buffer object
+ *
+ * This function exports a gbm bo as a foreign object. The types of
+ * foreign object supported are the same as the ones supported by the
+ * \ref gbm_bo_import() function.
+ *
+ * The foreign object shares the underlying pixels but its life-time is
+ * independent of the gbm bo.
+ *
+ * \param bo The gbm bo to be exported
+ * \param type The type of object to export to
+ * \param buffer Pointer to the external object
+ *
+ * \return Returns -1 on error, 0 otherwise
+ */
+GBM_EXPORT int
+gbm_bo_export(struct gbm_bo *bo, uint32_t type, void **buffer)
+{
+   return bo->gbm->bo_export(bo, type, buffer);
 }
 
 /**

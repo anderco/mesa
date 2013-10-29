@@ -475,6 +475,12 @@ gbm_dri_bo_import(struct gbm_device *gbm,
    return &bo->base.base;
 }
 
+static int
+gbm_dri_bo_export(struct gbm_bo *_bo, uint32_t type, void **buffer)
+{
+   return -1;
+}
+
 static struct gbm_bo *
 create_dumb(struct gbm_device *gbm,
                   uint32_t width, uint32_t height,
@@ -660,6 +666,7 @@ dri_device_create(int fd)
    dri->base.base.fd = fd;
    dri->base.base.bo_create = gbm_dri_bo_create;
    dri->base.base.bo_import = gbm_dri_bo_import;
+   dri->base.base.bo_export = gbm_dri_bo_export;
    dri->base.base.is_format_supported = gbm_dri_is_format_supported;
    dri->base.base.bo_write = gbm_dri_bo_write;
    dri->base.base.bo_destroy = gbm_dri_bo_destroy;

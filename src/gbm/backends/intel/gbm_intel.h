@@ -47,6 +47,7 @@ struct gbm_intel_bo {
    struct gbm_drm_bo base;
 
    drm_intel_bo *bo;
+   uint32_t name;
 };
 
 struct gbm_intel_surface {

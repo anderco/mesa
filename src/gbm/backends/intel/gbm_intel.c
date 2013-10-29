@@ -156,6 +156,26 @@ gbm_intel_bo_import(struct gbm_device *gbm,
    return NULL;
 }
 
+static int
+gbm_intel_bo_export(struct gbm_bo *bo, uint32_t type, void **buffer)
+{
+   struct gbm_intel_bo *ibo = gbm_intel_bo(bo);
+   int ret;
+
+   if (type != GBM_BO_IMPORT_GEM_NAME)
+      return -1;
+
+   if (ibo->name == 0) {
+      ret = drm_intel_bo_flink(ibo->bo, &ibo->name);
+      if (ret < 0)
+	 return ret;
+   }
+
+   *((uint32_t *) buffer) = ibo->name;
+
+   return 0;
+}
+
 static struct gbm_surface *
 gbm_intel_surface_create(struct gbm_device *gbm,
                        uint32_t width, uint32_t height,
@@ -202,6 +222,7 @@ gbm_intel_device_create(int fd)
    igbm->base.base.fd = fd;
    igbm->base.base.bo_create = gbm_intel_bo_create;
    igbm->base.base.bo_import = gbm_intel_bo_import;
+   igbm->base.base.bo_export = gbm_intel_bo_export;
    igbm->base.base.is_format_supported = gbm_intel_is_format_supported;
    igbm->base.base.bo_write = gbm_intel_bo_write;
    igbm->base.base.bo_destroy = gbm_intel_bo_destroy;

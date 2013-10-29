@@ -68,6 +68,7 @@ struct gbm_device {
                                uint32_t usage);
    struct gbm_bo *(*bo_import)(struct gbm_device *gbm, uint32_t type,
                                void *buffer, uint32_t usage);
+   int (*bo_export)(struct gbm_bo *bo, uint32_t type, void **buffer);
    int (*bo_write)(struct gbm_bo *bo, const void *buf, size_t data);
    void (*bo_destroy)(struct gbm_bo *bo);
 
@@ -103,6 +104,8 @@ struct gbm_surface {
    uint32_t height;
    uint32_t format;
    uint32_t flags;
+
+   void *priv;
 };
 
 struct gbm_backend {

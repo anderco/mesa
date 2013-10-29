@@ -232,10 +232,14 @@ gbm_bo_create(struct gbm_device *gbm,
 
 #define GBM_BO_IMPORT_WL_BUFFER         0x5501
 #define GBM_BO_IMPORT_EGL_IMAGE         0x5502
+#define GBM_BO_IMPORT_GEM_NAME          0x5503
 
 struct gbm_bo *
 gbm_bo_import(struct gbm_device *gbm, uint32_t type,
               void *buffer, uint32_t usage);
+
+int
+gbm_bo_export(struct gbm_bo *bo, uint32_t type, void **buffer);
 
 uint32_t
 gbm_bo_get_width(struct gbm_bo *bo);
