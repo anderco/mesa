@@ -94,6 +94,11 @@ AM_CFLAGS += -DHAVE_DRM_PLATFORM
 libEGL_la_LIBADD += ../../gbm/libgbm.la
 endif
 
+if HAVE_EGL_PLATFORM_GBM
+AM_CFLAGS += -DHAVE_GBM_PLATFORM
+libEGL_la_LIBADD += ../../gbm/libgbm.la
+endif
+
 if HAVE_EGL_PLATFORM_FBDEV
 AM_CFLAGS += -DHAVE_FBDEV_PLATFORM
 endif

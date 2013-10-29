@@ -1406,11 +1406,11 @@ for plat in $egl_platforms; do
 		PKG_CHECK_MODULES([XCB_DRI2], [x11-xcb xcb-dri2 >= $XCBDRI2_REQUIRED xcb-xfixes])
 		;;
 
-	drm)
+	drm|gbm)
 		test "x$enable_gbm" = "xno" &&
-			AC_MSG_ERROR([EGL platform drm needs gbm])
+			AC_MSG_ERROR([EGL platform '$plat' needs gbm])
 		test "x$have_libdrm" != xyes &&
-			AC_MSG_ERROR([EGL platform drm requires libdrm >= $LIBDRM_REQUIRED])
+			AC_MSG_ERROR([EGL platform '$plat' requires libdrm >= $LIBDRM_REQUIRED])
 		;;
 
 	android|fbdev|gdi|null)
@@ -1445,6 +1445,7 @@ AM_CONDITIONAL(HAVE_EGL_PLATFORM_WAYLAND, echo "$egl_platforms" | grep 'wayland'
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep 'drm' >/dev/null 2>&1)
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_FBDEV, echo "$egl_platforms" | grep 'fbdev' >/dev/null 2>&1)
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_NULL, echo "$egl_platforms" | grep 'null' >/dev/null 2>&1)
+AM_CONDITIONAL(HAVE_EGL_PLATFORM_GBM, echo "$egl_platforms" | grep 'gbm' >/dev/null 2>&1)
 
 AM_CONDITIONAL(HAVE_EGL_DRIVER_DRI2, test "x$HAVE_EGL_DRIVER_DRI2" != "x")
 
