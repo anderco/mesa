@@ -110,7 +110,7 @@ dri2_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       if (!window)
          return NULL;
       surf = gbm_dri_surface((struct gbm_surface *) window);
-      dri2_surf->gbm_surf = surf;
+      dri2_surf->gbm_dri_surf = surf;
       dri2_surf->base.Width =  surf->base.width;
       dri2_surf->base.Height = surf->base.height;
       surf->dri_private = dri2_surf;
@@ -122,7 +122,7 @@ dri2_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    dri2_surf->dri_drawable =
       (*dri2_dpy->dri2->createNewDrawable) (dri2_dpy->dri_screen,
 					    dri2_conf->dri_double_config,
-					    dri2_surf->gbm_surf);
+					    dri2_surf->gbm_dri_surf);
 
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
@@ -180,7 +180,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf, __DRIbuffer *buffer)
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
    struct gbm_dri_bo *bo;
-   struct gbm_dri_surface *surf = dri2_surf->gbm_surf;
+   struct gbm_dri_surface *surf = dri2_surf->gbm_dri_surf;
    int i, name, pitch;
 
    if (dri2_surf->back == NULL) {
