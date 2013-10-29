@@ -55,6 +55,18 @@ libgbm_la_LIBADD += \
 	libgbm_dri.la $(top_builddir)/src/mapi/shared-glapi/libglapi.la $(LIBDRM_LIBS)
 endif
 
+if HAVE_I965_DRI
+noinst_LTLIBRARIES = libgbm_intel.la
+libgbm_intel_la_SOURCES = \
+	backends/intel/gbm_intel.c
+
+libgbm_intel_la_CFLAGS = \
+	$(AM_CFLAGS) $(INTEL_CFLAGS)
+
+libgbm_la_LIBADD += \
+	libgbm_intel.la $(INTEL_LIBS)
+endif
+
 TESTS = gbm-symbols-check
 
 include $(top_srcdir)/install-lib-links.mk

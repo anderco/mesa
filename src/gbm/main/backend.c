@@ -37,6 +37,7 @@
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 
 extern const struct gbm_backend gbm_dri_backend;
+extern const struct gbm_backend gbm_intel_backend;
 
 struct backend_desc {
    const char *name;
@@ -45,6 +46,7 @@ struct backend_desc {
 
 static const struct backend_desc backends[] = {
    { "gbm_dri.so", &gbm_dri_backend },
+   { "gbm_intel.so", &gbm_intel_backend },
    { "gbm_gallium_drm.so", NULL },
 };
 
