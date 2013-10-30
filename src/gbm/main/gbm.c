@@ -201,7 +201,25 @@ gbm_bo_get_height(struct gbm_bo *bo)
 GBM_EXPORT uint32_t
 gbm_bo_get_stride(struct gbm_bo *bo)
 {
-   return bo->stride;
+   return bo->stride[0];
+}
+
+/** Get strides and offsets for the different planes in the bo
+ *
+ * Returns the strides and offsets for the different planes in the bo.
+ * The number of planes in detemined by the format of the bo. The arrays
+ * supplied as parameters must be able at least 3 elements long. Values
+ * for planes unused by the bo format are guaranteed to be zero.
+ *
+ * \param bo The bo to get the planes from
+ * \param strides Pointer to a 3 elements long array for returning strides
+ * \param offsets Pointer to a 3 elements long array for returning offsets
+ */
+GBM_EXPORT void
+gbm_bo_get_planes(struct gbm_bo *bo, uint32_t *strides, uint32_t *offsets)
+{
+   memcpy(strides, bo->stride, sizeof bo->stride);
+   memcpy(offsets, bo->offset, sizeof bo->offset);
 }
 
 /** Get the format of the buffer object

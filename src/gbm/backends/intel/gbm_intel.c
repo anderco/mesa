@@ -91,7 +91,8 @@ align(int value, int size)
 
 static struct gbm_intel_bo *
 gbm_intel_bo_create_with_bo(struct gbm_device *gbm,
-                            uint32_t width, uint32_t height, uint32_t stride,
+                            uint32_t width, uint32_t height,
+                            uint32_t *stride, uint32_t *offset,
                             uint32_t format, uint32_t usage,
                             drm_intel_bo *bo)
 {
@@ -106,7 +107,8 @@ gbm_intel_bo_create_with_bo(struct gbm_device *gbm,
    ibo->base.base.gbm = gbm;
    ibo->base.base.width = width;
    ibo->base.base.height = height;
-   ibo->base.base.stride = stride;
+   memcpy(ibo->base.base.stride, stride, 3 * sizeof stride[0]);
+   memcpy(ibo->base.base.offset, offset, 3 * sizeof offset[0]);
    ibo->base.base.format = format;
    ibo->base.base.handle.s32 = ibo->bo->handle;
 
@@ -121,7 +123,8 @@ gbm_intel_bo_create(struct gbm_device *gbm,
    struct gbm_intel_device *igbm = gbm_intel_device(gbm);
    struct gbm_intel_bo *ibo;
    drm_intel_bo *bo;
-   int size, stride;
+   int size;
+   uint32_t stride, strides[3], offsets[3];
 
    switch (format) {
    case GBM_BO_FORMAT_XRGB8888:
@@ -139,7 +142,11 @@ gbm_intel_bo_create(struct gbm_device *gbm,
    if (!bo)
       return NULL;
 
-   ibo = gbm_intel_bo_create_with_bo(gbm, width, height, stride,
+   memset(strides, 0, sizeof strides);
+   memset(offsets, 0, sizeof offsets);
+   strides[0] = stride;
+
+   ibo = gbm_intel_bo_create_with_bo(gbm, width, height, strides, offsets,
                                      format, usage, bo);
    if (!ibo) {
       drm_intel_bo_unreference(bo);

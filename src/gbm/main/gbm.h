@@ -250,6 +250,9 @@ gbm_bo_get_height(struct gbm_bo *bo);
 uint32_t
 gbm_bo_get_stride(struct gbm_bo *bo);
 
+void
+gbm_bo_get_planes(struct gbm_bo *bo, uint32_t *strides, uint32_t *offsets);
+
 uint32_t
 gbm_bo_get_format(struct gbm_bo *bo);
 
