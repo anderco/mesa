@@ -250,6 +250,33 @@ gbm_bo_write(struct gbm_bo *bo, const void *buf, size_t count)
    return bo->gbm->bo_write(bo, buf, count);
 }
 
+/** Map a buffer object in CPU accesible memory
+ *
+ * \param bo The buffer object to be mapped
+ * \return Pointer to the mapped buffer object or NULL on failure
+ */
+GBM_EXPORT void *
+gbm_bo_map(struct gbm_bo *bo)
+{
+   if (!bo->gbm->bo_map) {
+      errno = ENOSYS;
+      return NULL;
+   }
+
+   return bo->gbm->bo_map(bo);
+}
+
+/** Unmap a preivously mapped buffer object
+ *
+ * \param The buffer object to be unmapped
+ */
+GBM_EXPORT void
+gbm_bo_unmap(struct gbm_bo *bo)
+{
+   if (!bo->gbm->bo_unmap)
+      bo->gbm->bo_unmap(bo);
+}
+
 /** Get the gbm device used to create the buffer object
  *
  * \param bo The buffer object

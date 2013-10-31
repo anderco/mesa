@@ -46,6 +46,8 @@ struct gbm_intel_device {
 struct gbm_intel_bo {
    struct gbm_drm_bo base;
 
+   uint32_t usage;
+
    drm_intel_bo *bo;
 };
 

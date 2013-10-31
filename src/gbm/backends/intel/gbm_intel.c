@@ -73,6 +73,24 @@ gbm_intel_bo_write(struct gbm_bo *bo, const void *buf, size_t count)
    return drm_intel_bo_unmap(ibo->bo);
 }
 
+static void *
+gbm_intel_bo_map(struct gbm_bo *bo)
+{
+   struct gbm_intel_bo *ibo = gbm_intel_bo(bo);
+
+   drm_intel_bo_map(ibo->bo, 1);
+
+   return ibo->bo->virtual;
+}
+
+static void
+gbm_intel_bo_unmap(struct gbm_bo *bo)
+{
+   struct gbm_intel_bo *ibo = gbm_intel_bo(bo);
+
+   drm_intel_bo_unmap(ibo->bo);
+}
+
 static void
 gbm_intel_bo_destroy(struct gbm_bo *_bo)
 {
@@ -102,6 +120,7 @@ gbm_intel_bo_create_with_bo(struct gbm_device *gbm,
       return NULL;
 
    ibo->bo = bo;
+   ibo->usage = usage;
 
    ibo->base.base.gbm = gbm;
    ibo->base.base.width = width;
@@ -143,6 +162,9 @@ gbm_intel_bo_create(struct gbm_device *gbm,
          return NULL;
       tiling = I915_TILING_NONE;
    }
+
+   if (usage & GBM_BO_USE_MAP)
+      tiling = I915_TILING_NONE;
 
    if (usage & GBM_BO_USE_RENDERING)
       flags |= BO_ALLOC_FOR_RENDER;
@@ -220,6 +242,8 @@ gbm_intel_device_create(int fd)
    igbm->base.base.bo_import = gbm_intel_bo_import;
    igbm->base.base.is_format_supported = gbm_intel_is_format_supported;
    igbm->base.base.bo_write = gbm_intel_bo_write;
+   igbm->base.base.bo_map = gbm_intel_bo_map;
+   igbm->base.base.bo_unmap = gbm_intel_bo_unmap;
    igbm->base.base.bo_destroy = gbm_intel_bo_destroy;
    igbm->base.base.destroy = gbm_intel_destroy;
    igbm->base.base.surface_create = gbm_intel_surface_create;
