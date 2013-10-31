@@ -28,10 +28,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <xf86drm.h>
 
 #include "gbm_intel.h"
-
 #include "gbmint.h"
+#include "wayland-drm.h"
 
 static int
 gbm_intel_is_format_supported(struct gbm_device *gbm,
@@ -157,10 +158,40 @@ gbm_intel_bo_create(struct gbm_device *gbm,
 }
 
 static struct gbm_bo *
+gbm_intel_bo_dup(struct gbm_bo *bo)
+{
+   struct gbm_intel_bo *ref_ibo = gbm_intel_bo(bo);
+   struct gbm_intel_bo *ibo;
+
+   ibo = gbm_intel_bo_create_with_bo(bo->gbm,
+                                     bo->width, bo->height,
+                                     bo->stride, bo->offset,
+                                     bo->format, 0, ref_ibo->bo);
+
+   if (!ibo)
+      return NULL;
+
+   drm_intel_bo_reference(ibo->bo);
+
+   return &ibo->base.base;
+}
+
+
+static struct gbm_bo *
 gbm_intel_bo_import(struct gbm_device *gbm,
                   uint32_t type, void *buffer, uint32_t usage)
 {
-   return NULL;
+   struct gbm_intel_device *igbm = gbm_intel_device(gbm);
+   struct wl_drm_buffer *wb;
+
+   if (type != GBM_BO_IMPORT_WL_BUFFER)
+      return NULL;
+
+   wb = wayland_drm_buffer_get(igbm->wl_drm, (struct wl_resource *) buffer);
+   if (!wb || !wb->driver_buffer)
+      return NULL;
+
+   return gbm_intel_bo_dup(wb->driver_buffer);
 }
 
 static int
@@ -211,6 +242,98 @@ gbm_intel_surface_destroy(struct gbm_surface *_surf)
    free(surf);
 }
 
+static int
+authenticate(void *user_data, uint32_t magic)
+{
+   struct gbm_intel_device *igbm = user_data;
+
+   return igbm->base.authenticate(igbm->base.authenticate_data, magic);
+}
+
+static void
+reference_buffer(void *user_data, uint32_t name, int fd,
+                 struct wl_drm_buffer *buffer)
+{
+   struct gbm_intel_device *igbm = user_data;
+   struct gbm_intel_bo *ibo;
+   drm_intel_bo *bo;
+   int size;
+
+   size =
+      buffer->offset[0] + buffer->stride[0] * buffer->height +
+      buffer->offset[1] + buffer->stride[1] * buffer->height +
+      buffer->offset[2] + buffer->stride[2] * buffer->height;
+
+   if (fd == -1)
+      bo = drm_intel_bo_gem_create_from_name(igbm->bufmgr, "intel gbm", name);
+   else
+      bo = drm_intel_bo_gem_create_from_prime(igbm->bufmgr, fd, size);
+
+   if (!bo)
+      return;
+
+   ibo = gbm_intel_bo_create_with_bo(&igbm->base.base,
+                                     buffer->width, buffer->height,
+                                     (uint32_t *) buffer->stride,
+                                     (uint32_t *) buffer->offset,
+                                     buffer->format, 0, bo);
+   buffer->driver_buffer = ibo;
+}
+
+static void
+release_buffer(void *user_data, struct wl_drm_buffer *buffer)
+{
+   struct gbm_intel_bo *ibo = gbm_intel_bo(buffer->driver_buffer);
+
+   gbm_bo_destroy(&ibo->base.base);
+
+   buffer->driver_buffer = NULL;
+}
+
+static struct wayland_drm_callbacks wl_drm_callbacks = {
+   .authenticate = authenticate,
+   .reference_buffer = reference_buffer,
+   .release_buffer = release_buffer
+};
+
+static int
+gbm_intel_bind_wayland_display(struct gbm_device *gbm,
+                               struct wl_display *display)
+{
+   struct gbm_intel_device *igbm = gbm_intel_device(gbm);
+   int ret, flags;
+   uint64_t cap;
+
+   if (igbm->wl_drm)
+      return 0;
+
+   ret = drmGetCap(igbm->base.base.fd, DRM_CAP_PRIME, &cap);
+   if (ret == 0 && cap == (DRM_PRIME_CAP_IMPORT | DRM_PRIME_CAP_EXPORT))
+      flags = WAYLAND_DRM_PRIME;
+
+   igbm->wl_drm = wayland_drm_init(display, igbm->base.device_name,
+                                   &wl_drm_callbacks, igbm, flags);
+
+   if (igbm->wl_drm)
+      return 1;
+
+   return 0;
+}
+
+static int
+gbm_intel_unbind_wayland_display(struct gbm_device *gbm)
+{
+   struct gbm_intel_device *igbm = gbm_intel_device(gbm);
+
+   if (!igbm->wl_drm)
+      return 0;
+
+   wayland_drm_uninit(igbm->wl_drm);
+   igbm->wl_drm = NULL;
+
+   return 1;
+}
+
 static void
 gbm_intel_destroy(struct gbm_device *gbm)
 {
@@ -231,6 +354,8 @@ gbm_intel_device_create(int fd)
    igbm->base.base.bo_import = gbm_intel_bo_import;
    igbm->base.base.bo_export = gbm_intel_bo_export;
    igbm->base.base.is_format_supported = gbm_intel_is_format_supported;
+   igbm->base.base.bind_wayland_display = gbm_intel_bind_wayland_display;
+   igbm->base.base.unbind_wayland_display = gbm_intel_unbind_wayland_display;
    igbm->base.base.bo_write = gbm_intel_bo_write;
    igbm->base.base.bo_destroy = gbm_intel_bo_destroy;
    igbm->base.base.destroy = gbm_intel_destroy;

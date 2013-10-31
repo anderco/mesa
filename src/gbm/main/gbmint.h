@@ -61,6 +61,9 @@ struct gbm_device {
    int (*is_format_supported)(struct gbm_device *gbm,
                               uint32_t format,
                               uint32_t usage);
+   int (*bind_wayland_display)(struct gbm_device *gbm,
+                               struct wl_display *display);
+   int (*unbind_wayland_display)(struct gbm_device *gbm);
 
    struct gbm_bo *(*bo_create)(struct gbm_device *gbm,
                                uint32_t width, uint32_t height,

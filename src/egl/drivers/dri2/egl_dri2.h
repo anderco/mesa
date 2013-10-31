@@ -38,6 +38,7 @@
 #ifdef HAVE_WAYLAND_PLATFORM
 #include <wayland-client.h>
 #include "wayland-egl-priv.h"
+#include "gbm.h"
 #endif
 
 #include <GL/gl.h>
@@ -133,6 +134,9 @@ struct dri2_egl_display
    int			     authenticated;
    int			     formats;
    uint32_t                  capabilities;
+
+   /* For WL_bind_wayland_display */
+   struct gbm_device *gbm;
 #endif
 
    int (*authenticate) (_EGLDisplay *disp, uint32_t id);

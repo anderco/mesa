@@ -40,6 +40,10 @@ struct gbm_drm_device {
    struct gbm_device base;
    enum gbm_drm_driver_type type;
    char *driver_name;
+   char *device_name;
+
+   int (*authenticate)(void *data, uint32_t id);
+   void *authenticate_data;
 };
 
 struct gbm_drm_bo {

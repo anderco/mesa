@@ -652,6 +652,101 @@ gbm_dri_surface_destroy(struct gbm_surface *_surf)
    free(surf);
 }
 
+static int
+authenticate(void *user_data, uint32_t magic)
+{
+   struct gbm_dri_device *dri = user_data;
+
+   return dri->base.authenticate(dri->base.authenticate_data, magic);
+}
+
+static void
+reference_buffer(void *user_data, uint32_t name, int fd,
+                 struct wl_drm_buffer *buffer)
+{
+   struct gbm_dri_device *dri = user_data;
+   __DRIimage *img;
+
+    if (fd == -1)
+      img = dri->image->createImageFromNames(dri->screen,
+                                             buffer->width,
+                                             buffer->height,
+                                             buffer->format,
+                                             (int*)&name, 1,
+                                             buffer->stride,
+                                             buffer->offset,
+                                             NULL);
+   else
+      img = dri->image->createImageFromFds(dri->screen,
+                                           buffer->width,
+                                           buffer->height,
+                                           buffer->format,
+                                           &fd, 1,
+                                           buffer->stride,
+                                           buffer->offset,
+                                           NULL);
+
+   if (img == NULL)
+      return;
+
+   buffer->driver_buffer = img;
+}
+
+static void
+release_buffer(void *user_data, struct wl_drm_buffer *buffer)
+{
+   struct gbm_dri_device *dri = user_data;
+
+   dri->image->destroyImage(buffer->driver_buffer);
+   buffer->driver_buffer = NULL;
+}
+
+static struct wayland_drm_callbacks wl_drm_callbacks = {
+   .authenticate = authenticate,
+   .reference_buffer = reference_buffer,
+   .release_buffer = release_buffer
+};
+
+static int
+gbm_dri_bind_wayland_display(struct gbm_device *gbm,
+                               struct wl_display *display)
+{
+   struct gbm_dri_device *dri = gbm_dri_device(gbm);
+   int ret, flags;
+   uint64_t cap;
+
+   if (dri->wl_drm)
+      return 0;
+
+   ret = drmGetCap(dri->base.base.fd, DRM_CAP_PRIME, &cap);
+   if (ret == 0 && cap == (DRM_PRIME_CAP_IMPORT | DRM_PRIME_CAP_EXPORT) &&
+       dri->image->base.version >= 7 &&
+       dri->image->createImageFromFds != NULL)
+      flags = WAYLAND_DRM_PRIME;
+
+   dri->wl_drm = wayland_drm_init(display, dri->base.device_name,
+                                   &wl_drm_callbacks, dri, flags);
+
+   if (dri->wl_drm)
+      return 1;
+
+   return 0;
+}
+
+static int
+gbm_dri_unbind_wayland_display(struct gbm_device *gbm)
+{
+   struct gbm_dri_device *dri = gbm_dri_device(gbm);
+
+   if (!dri->wl_drm)
+      return 0;
+
+   wayland_drm_uninit(dri->wl_drm);
+   dri->wl_drm = NULL;
+
+   return 1;
+}
+
 static void
 dri_destroy(struct gbm_device *gbm)
 {
@@ -678,6 +773,8 @@ dri_device_create(int fd)
    dri->base.base.bo_import = gbm_dri_bo_import;
    dri->base.base.bo_export = gbm_dri_bo_export;
    dri->base.base.is_format_supported = gbm_dri_is_format_supported;
+   dri->base.base.bind_wayland_display = gbm_dri_bind_wayland_display;
+   dri->base.base.unbind_wayland_display = gbm_dri_unbind_wayland_display;
    dri->base.base.bo_write = gbm_dri_bo_write;
    dri->base.base.bo_destroy = gbm_dri_bo_destroy;
    dri->base.base.destroy = dri_destroy;

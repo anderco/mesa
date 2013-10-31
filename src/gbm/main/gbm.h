@@ -46,6 +46,8 @@ struct gbm_device;
 struct gbm_bo;
 struct gbm_surface;
 
+struct wl_display;
+
 /**
  * \mainpage The Generic Buffer Manager
  *
@@ -218,6 +220,13 @@ gbm_device_get_backend_name(struct gbm_device *gbm);
 int
 gbm_device_is_format_supported(struct gbm_device *gbm,
                                uint32_t format, uint32_t usage);
+
+int
+gbm_device_bind_wayland_display(struct gbm_device *gbm,
+                                struct wl_display *display);
+
+int
+gbm_device_unbind_wayland_display(struct gbm_device *gbm);
 
 void
 gbm_device_destroy(struct gbm_device *gbm);

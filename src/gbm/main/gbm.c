@@ -89,6 +89,38 @@ gbm_device_is_format_supported(struct gbm_device *gbm,
    return gbm->is_format_supported(gbm, format, usage);
 }
 
+/** Bind the gbm device to wayland display
+ *
+ * A gbm device must be bound to a wayland display in order to import
+ * wl_buffers into gbm bos. This will install a buffer sharing global
+ * on the wayland display, such as wl_drm.
+ *
+ * \return non-zero on success
+ */
+GBM_EXPORT int
+gbm_device_bind_wayland_display(struct gbm_device *gbm,
+                               struct wl_display *display)
+{
+   if (gbm->bind_wayland_display)
+      return gbm->bind_wayland_display(gbm, display);
+   else
+      return 0;
+}
+
+/**
+ * Unbind a gbm device from a previously bound wayland display
+ *
+ * \return 0 when there's no wl_display bound, 1 otherwise
+ */
+GBM_EXPORT int
+gbm_device_unbind_wayland_display(struct gbm_device *gbm)
+{
+   if (gbm->unbind_wayland_display)
+      return gbm->unbind_wayland_display(gbm);
+   else
+      return 0;
+}
+
 /** Destroy the gbm device and free all resources associated with it.
  *
  * \param gbm The device created using gbm_create_device()

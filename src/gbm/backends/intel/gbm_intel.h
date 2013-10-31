@@ -35,12 +35,15 @@
 #include "common.h"
 #include "common_drm.h"
 
+struct wl_drm;
 struct gbm_intel_surface;
 
 struct gbm_intel_device {
    struct gbm_drm_device base;
 
    drm_intel_bufmgr *bufmgr;
+
+   struct wl_drm *wl_drm;
 };
 
 struct gbm_intel_bo {
