@@ -207,6 +207,11 @@ enum gbm_bo_flags {
     * combinations.
     */
    GBM_BO_USE_WRITE    = (1 << 3),
+   /**
+    * Buffer can be mapped with gbm_bo_map().  Implementation of this
+    * functionality is not mandatory.
+    */
+   GBM_BO_USE_MAP = (1 << 4),
 };
 
 int
@@ -269,6 +274,12 @@ gbm_bo_get_fd(struct gbm_bo *bo);
 
 int
 gbm_bo_write(struct gbm_bo *bo, const void *buf, size_t count);
+
+void *
+gbm_bo_map(struct gbm_bo *bo);
+
+void
+gbm_bo_unmap(struct gbm_bo *bo);
 
 void
 gbm_bo_set_user_data(struct gbm_bo *bo, void *data,

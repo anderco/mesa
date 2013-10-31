@@ -267,6 +267,49 @@ gbm_bo_write(struct gbm_bo *bo, const void *buf, size_t count)
    return bo->gbm->bo_write(bo, buf, count);
 }
 
+/** Map a buffer object in CPU accesible memory
+ *
+ * \remark A GBM backend may not implement this interface. Users should
+ * implement a fallback path.
+ *
+ * This makes the content of the bo available for CPU access until
+ * \ref gbm_bo_unmap() is called. Synchronization between CPU and GPU
+ * will be done at unmap time, so the caller shouldn't assume coherency
+ * for mapped buffers.
+ *
+ * A GBM backend may choose not to implement this functionality. In that
+ * case, both this function and \ref gbm_bo_create() with the \ref
+ * GBM_BO_USE_MAP flag should fail, and errno set to ENOSYS.
+ *
+ * \param bo The buffer object to be mapped
+ * \return Pointer to the mapped buffer object or NULL on failure
+ */
+GBM_EXPORT void *
+gbm_bo_map(struct gbm_bo *bo)
+{
+   if (!bo->gbm->bo_map) {
+      errno = ENOSYS;
+      return NULL;
+   }
+
+   return bo->gbm->bo_map(bo);
+}
+
+/** Unmap a previously mapped buffer object
+ *
+ * Unmaps the given bo and perform any necessary synchronization such as
+ * cache flushing, copying, etc, so that the GPU sees the same data as
+ * written by the CPU.
+ *
+ * \param The buffer object to be unmapped
+ */
+GBM_EXPORT void
+gbm_bo_unmap(struct gbm_bo *bo)
+{
+   if (bo->gbm->bo_unmap)
+      bo->gbm->bo_unmap(bo);
+}
+
 /** Get the gbm device used to create the buffer object
  *
  * \param bo The buffer object
@@ -335,6 +378,11 @@ gbm_bo_destroy(struct gbm_bo *bo)
  * when no longer needed. If an error occurs during allocation %NULL will be
  * returned and errno set.
  *
+ * Allocation may also fail due to an unsupported usage type. For instance,
+ * the flag \ref GBM_BO_USE_MAP may cause the allocation to fail if that
+ * optional functionality is not implemented. In that case, errno is set to
+ * ENOSYS.
+ *
  * \sa enum gbm_bo_format for the list of formats
  * \sa enum gbm_bo_flags for the list of usage flags
  */
@@ -343,6 +391,11 @@ gbm_bo_create(struct gbm_device *gbm,
               uint32_t width, uint32_t height,
               uint32_t format, uint32_t usage)
 {
+   if ((usage & GBM_BO_USE_MAP) && !gbm->bo_map) {
+      errno = ENOSYS;
+      return NULL;
+   }
+
    if (width == 0 || height == 0) {
       errno = EINVAL;
       return NULL;

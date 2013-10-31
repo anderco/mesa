@@ -346,6 +346,9 @@ gbm_dri_is_format_supported(struct gbm_device *gbm,
        usage & GBM_BO_USE_RENDERING)
       return 0;
 
+   if (usage & GBM_BO_USE_MAP)
+      return 0;
+
    return 1;
 }
 
