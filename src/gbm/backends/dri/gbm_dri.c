@@ -478,7 +478,17 @@ gbm_dri_bo_import(struct gbm_device *gbm,
 static int
 gbm_dri_bo_export(struct gbm_bo *_bo, uint32_t type, void **buffer)
 {
-   return -1;
+   struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
+   struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
+
+   if (type != GBM_BO_IMPORT_GEM_NAME)
+      return -1;
+
+   if (dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_NAME,
+                              (int *) buffer))
+      return 0;
+   else
+      return -1;
 }
 
 static struct gbm_bo *
