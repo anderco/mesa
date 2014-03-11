@@ -172,6 +172,31 @@ intel_region_flink(struct intel_region *region, uint32_t *name)
 }
 
 struct intel_region *
+intel_region_alloc_for_buffer(struct intel_screen *screen,
+			      GLuint cpp,
+			      GLuint width, GLuint height, GLuint pitch,
+			      drm_intel_bo *buffer, const char *name)
+{
+   struct intel_region *region;
+   int ret;
+   uint32_t bit_6_swizzle, tiling;
+
+   ret = drm_intel_bo_get_tiling(buffer, &tiling, &bit_6_swizzle);
+   if (ret != 0) {
+      fprintf(stderr, "Couldn't get tiling of buffer (%s): %s\n",
+	      name, strerror(-ret));
+      return NULL;
+   }
+
+   region = intel_region_alloc_internal(screen, cpp,
+					width, height, pitch, tiling, buffer);
+   if (region == NULL)
+      return NULL;
+
+   return region;
+}
+
+struct intel_region *
 intel_region_alloc_for_handle(struct intel_screen *screen,
 			      GLuint cpp,
 			      GLuint width, GLuint height, GLuint pitch,
@@ -179,23 +204,15 @@ intel_region_alloc_for_handle(struct intel_screen *screen,
 {
    struct intel_region *region;
    drm_intel_bo *buffer;
-   int ret;
-   uint32_t bit_6_swizzle, tiling;
 
    buffer = intel_bo_gem_create_from_name(screen->bufmgr, name, handle);
    if (buffer == NULL)
       return NULL;
-   ret = drm_intel_bo_get_tiling(buffer, &tiling, &bit_6_swizzle);
-   if (ret != 0) {
-      fprintf(stderr, "Couldn't get tiling of buffer %d (%s): %s\n",
-	      handle, name, strerror(-ret));
-      drm_intel_bo_unreference(buffer);
-      return NULL;
-   }
 
-   region = intel_region_alloc_internal(screen, cpp,
-					width, height, pitch, tiling, buffer);
-   if (region == NULL) {
+   region = intel_region_alloc_for_buffer(screen, cpp, width, height, pitch,
+					  buffer, name);
+
+   if (!region) {
       drm_intel_bo_unreference(buffer);
       return NULL;
    }
@@ -214,22 +231,13 @@ intel_region_alloc_for_fd(struct intel_screen *screen,
 {
    struct intel_region *region;
    drm_intel_bo *buffer;
-   int ret;
-   uint32_t bit_6_swizzle, tiling;
 
    buffer = drm_intel_bo_gem_create_from_prime(screen->bufmgr, fd, size);
    if (buffer == NULL)
       return NULL;
-   ret = drm_intel_bo_get_tiling(buffer, &tiling, &bit_6_swizzle);
-   if (ret != 0) {
-      fprintf(stderr, "Couldn't get tiling of buffer (%s): %s\n",
-	      name, strerror(-ret));
-      drm_intel_bo_unreference(buffer);
-      return NULL;
-   }
 
-   region = intel_region_alloc_internal(screen, cpp,
-					width, height, pitch, tiling, buffer);
+   region = intel_region_alloc_for_buffer(screen, cpp, width, height, pitch,
+					  buffer, name);
    if (region == NULL) {
       drm_intel_bo_unreference(buffer);
       return NULL;
