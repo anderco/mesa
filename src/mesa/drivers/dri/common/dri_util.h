@@ -177,6 +177,7 @@ struct __DRIscreenRec {
 	__DRIdri2LoaderExtension *loader;
 	__DRIimageLookupExtension *image;
 	__DRIuseInvalidateExtension *useInvalidate;
+	__DRIsharedBufmgrExtension *bufmgr;
     } dri2;
 
     struct {

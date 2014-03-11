@@ -1424,4 +1424,15 @@ struct __DRIimageDriverExtensionRec {
    __DRIgetAPIMaskFunc                  getAPIMask;
 };
 
+/**
+ * Allows the DRI screen to share a low-level (drm) bufmgr with gbm.
+ */
+#define __DRI_SHARED_BUFMGR "DRI_SHARED_BUFMGR"
+#define __DRI_SHARED_BUFMGR_VERSION 1
+
+typedef struct __DRIsharedBufmgrExtensionRec {
+   __DRIextension base;
+   void *bufmgr;
+} __DRIsharedBufmgrExtension;
+
 #endif

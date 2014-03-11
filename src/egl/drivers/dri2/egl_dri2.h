@@ -175,7 +175,8 @@ struct dri2_egl_display
 
    __DRIdri2LoaderExtension    dri2_loader_extension;
    __DRIswrastLoaderExtension  swrast_loader_extension;
-   const __DRIextension     *extensions[5];
+   __DRIsharedBufmgrExtension  shared_bufmgr_extension;
+   const __DRIextension     *extensions[6];
    const __DRIextension    **driver_extensions;
 
 #ifdef HAVE_X11_PLATFORM
