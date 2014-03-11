@@ -1005,7 +1005,7 @@ struct __DRIdri2ExtensionRec {
  * extensions.
  */
 #define __DRI_IMAGE "DRI_IMAGE"
-#define __DRI_IMAGE_VERSION 8
+#define __DRI_IMAGE_VERSION 9
 
 /**
  * These formats correspond to the similarly named MESA_FORMAT_*
@@ -1239,6 +1239,17 @@ struct __DRIimageExtensionRec {
                                          enum __DRIChromaSiting vert_siting,
                                          unsigned *error,
                                          void *loaderPrivate);
+   /**
+    * Create image from a driver-dependent handle. Depends on the shared
+    * bufmgr extension.
+    *
+    * \since 9 ?
+    */
+   __DRIimage *(*createImageFromHandle)(__DRIscreen *screen,
+				      int width, int height, int format,
+				      void *handle, int pitch,
+				      void *loaderPrivate);
+
 };
 
 

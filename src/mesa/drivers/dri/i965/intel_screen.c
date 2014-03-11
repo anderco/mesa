@@ -796,8 +796,40 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
     return image;
 }
 
+static __DRIimage *
+intel_create_image_from_handle(__DRIscreen *screen,
+			       int width, int height, int format,
+			       void *handle, int pitch, void *loaderPrivate)
+{
+    struct intel_screen *intelScreen = screen->driverPrivate;
+    __DRIimage *image;
+    int cpp;
+
+    image = intel_allocate_image(format, loaderPrivate);
+    if (image == NULL)
+       return NULL;
+
+    if (image->format == MESA_FORMAT_NONE)
+       cpp = 1;
+    else
+       cpp = _mesa_get_format_bytes(image->format);
+    image->region = intel_region_alloc_for_buffer(intelScreen,
+						  cpp, width, height,
+						  pitch * cpp, handle, "image");
+    if (image->region == NULL) {
+       free(image);
+       return NULL;
+    }
+
+    drm_intel_bo_reference(handle);
+
+    intel_setup_image_from_dimensions(image);
+
+    return image;
+}
+
 static struct __DRIimageExtensionRec intelImageExtension = {
-    .base = { __DRI_IMAGE, 8 },
+    .base = { __DRI_IMAGE, 9 },
 
     .createImageFromName                = intel_create_image_from_name,
     .createImageFromRenderbuffer        = intel_create_image_from_renderbuffer,
@@ -810,7 +842,8 @@ static struct __DRIimageExtensionRec intelImageExtension = {
     .fromPlanar                         = intel_from_planar,
     .createImageFromTexture             = intel_create_image_from_texture,
     .createImageFromFds                 = intel_create_image_from_fds,
-    .createImageFromDmaBufs             = intel_create_image_from_dma_bufs
+    .createImageFromDmaBufs             = intel_create_image_from_dma_bufs,
+    .createImageFromHandle              = intel_create_image_from_handle
 };
 
 static int

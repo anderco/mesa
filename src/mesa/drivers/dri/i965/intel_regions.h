@@ -83,6 +83,12 @@ struct intel_region *intel_region_alloc(struct intel_screen *screen,
 					bool expect_accelerated_upload);
 
 struct intel_region *
+intel_region_alloc_for_buffer(struct intel_screen *screen,
+			      GLuint cpp,
+			      GLuint width, GLuint height, GLuint pitch,
+			      drm_intel_bo *buffer, const char *name);
+
+struct intel_region *
 intel_region_alloc_for_handle(struct intel_screen *screen,
 			      GLuint cpp,
 			      GLuint width, GLuint height, GLuint pitch,
