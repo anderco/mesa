@@ -81,6 +81,8 @@ setupLoaderExtensions(__DRIscreen *psp,
 	    psp->swrast_loader = (__DRIswrastLoaderExtension *) extensions[i];
         if (strcmp(extensions[i]->name, __DRI_IMAGE_LOADER) == 0)
            psp->image.loader = (__DRIimageLoaderExtension *) extensions[i];
+	if (strcmp(extensions[i]->name, __DRI_SHARED_BUFMGR) == 0)
+	    psp->dri2.bufmgr = (__DRIsharedBufmgrExtension *) extensions[i];
     }
 }
 
