@@ -40,10 +40,16 @@ struct gbm_drm_device {
    struct gbm_device base;
    enum gbm_drm_driver_type type;
    char *driver_name;
+
+   /* Driver dependent buffer manager object */
+   void *bufmgr;
 };
 
 struct gbm_drm_bo {
    struct gbm_bo base;
+
+   /* Driver dependent buffer object */
+   void *bo;
 };
 
 #endif

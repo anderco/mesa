@@ -110,6 +110,8 @@ gbm_intel_bo_create_with_bo(struct gbm_device *gbm,
    ibo->base.base.format = format;
    ibo->base.base.handle.s32 = ibo->bo->handle;
 
+   ibo->base.bo = bo;
+
    return ibo;
 }
 
@@ -231,6 +233,8 @@ gbm_intel_device_create(int fd)
       free(igbm);
       return NULL;
    }
+
+   igbm->base.bufmgr = igbm->bufmgr;
 
    return &igbm->base.base;
 }
