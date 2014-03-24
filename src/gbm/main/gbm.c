@@ -399,6 +399,29 @@ gbm_bo_import(struct gbm_device *gbm,
    return gbm->bo_import(gbm, type, buffer, usage);
 }
 
+GBM_EXPORT int
+gbm_bo_export(struct gbm_bo *bo,
+              uint32_t type, void **buffer, uint32_t usage)
+{
+   if (bo->gbm->bo_export)
+      return bo->gbm->bo_export(bo, type, buffer, usage);
+   else
+      return -1;
+}
+
+GBM_EXPORT struct gbm_bo *
+gbm_bo_import2(struct gbm_device *gbm,
+               uint32_t type, void *buffer,
+               uint32_t width, uint32_t height,
+               uint32_t stride,
+               uint32_t format, uint32_t usage)
+{
+   if (gbm->bo_import2)
+      return gbm->bo_import2(gbm, type, buffer, width, height, stride, format, usage);
+   else
+      return NULL;
+}
+
 /**
  * Allocate a surface object
  *

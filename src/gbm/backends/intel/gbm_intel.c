@@ -25,9 +25,12 @@
  *    Ander Conselvan de Oliveira <ander.conselvan.de.oliveira@intel.com>
  */
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "gbm_intel.h"
 
@@ -192,6 +195,61 @@ gbm_intel_bo_import(struct gbm_device *gbm,
    return NULL;
 }
 
+static int
+gbm_intel_bo_export(struct gbm_bo *bo, uint32_t type,
+                    void **buffer, uint32_t usage)
+{
+   struct gbm_intel_bo *ibo = gbm_intel_bo(bo);
+   int *fd = (int *) buffer;
+
+   if (type != GBM_BO_IMPORT_DMA_BUF)
+      return -1;
+
+   return drm_intel_bo_gem_export_to_prime(ibo->bo, fd);
+}
+
+static struct gbm_bo *
+gbm_intel_bo_import2(struct gbm_device *gbm,
+                     uint32_t type, void *buffer,
+                     uint32_t width, uint32_t height,
+                     uint32_t stride,
+                     uint32_t format, uint32_t usage)
+{
+   struct gbm_intel_device *igbm = gbm_intel_device(gbm);
+   struct gbm_intel_bo *ibo;
+   drm_intel_bo *bo;
+   int fd, size;
+
+   if (type != GBM_BO_IMPORT_DMA_BUF)
+      return NULL;
+
+   fd = *((int *) buffer);
+   size = lseek(fd, 0, SEEK_END);
+
+   /* If kernel doesn't support dma_buf size discovery, use stride * height. */
+   if (size < 0) {
+      if (errno == ESPIPE)
+         size = stride * height;
+      else
+         return NULL;
+   }
+
+   lseek(fd, 0, SEEK_SET);
+
+   bo = drm_intel_bo_gem_create_from_prime(igbm->bufmgr, fd, size);
+   if (!bo)
+      return NULL;
+
+   ibo = gbm_intel_bo_create_with_bo(gbm, width, height, stride,
+                                     format, usage, bo);
+   if (!ibo) {
+      drm_intel_bo_unreference(bo);
+      return NULL;
+   }
+
+   return &ibo->base.base;
+}
+
 static struct gbm_surface *
 gbm_intel_surface_create(struct gbm_device *gbm,
                        uint32_t width, uint32_t height,
@@ -240,6 +298,8 @@ gbm_intel_device_create(int fd)
    igbm->base.base.fd = fd;
    igbm->base.base.bo_create = gbm_intel_bo_create;
    igbm->base.base.bo_import = gbm_intel_bo_import;
+   igbm->base.base.bo_export = gbm_intel_bo_export;
+   igbm->base.base.bo_import2 = gbm_intel_bo_import2;
    igbm->base.base.is_format_supported = gbm_intel_is_format_supported;
    igbm->base.base.bo_write = gbm_intel_bo_write;
    igbm->base.base.bo_map = gbm_intel_bo_map;
