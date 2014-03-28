@@ -684,7 +684,7 @@ dri2_terminate(_EGLDriver *drv, _EGLDisplay *disp)
 #ifdef HAVE_DRM_PLATFORM
    case _EGL_PLATFORM_DRM:
       if (dri2_dpy->own_device) {
-         gbm_device_destroy(&dri2_dpy->gbm_dri->base.base);
+         gbm_device_destroy(&dri2_dpy->gbm_drm->base);
       }
       break;
 #endif
@@ -2016,8 +2016,11 @@ dri2_bind_wayland_display_wl(_EGLDriver *drv, _EGLDisplay *disp,
 #ifdef HAVE_DRM_PLATFORM
    /* We have to share the wl_drm instance with gbm, so gbm can convert
     * wl_buffers to gbm bos. */
-   if (dri2_dpy->gbm_dri)
-      dri2_dpy->gbm_dri->wl_drm = dri2_dpy->wl_server_drm;
+   if (dri2_dpy->gbm_drm &&
+       dri2_dpy->gbm_drm->type == GBM_DRM_DRIVER_TYPE_DRI) {
+      struct gbm_dri_device *gbm_dri = gbm_dri_device(&dri2_dpy->gbm_drm->base);
+      gbm_dri->wl_drm = dri2_dpy->wl_server_drm;
+   }
 #endif
 
    return EGL_TRUE;

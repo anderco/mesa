@@ -44,6 +44,7 @@
 #include <GL/internal/dri_interface.h>
 
 #ifdef HAVE_DRM_PLATFORM
+#include <common_drm.h>
 #include <gbm_driint.h>
 #endif
 
@@ -167,7 +168,7 @@ struct dri2_egl_display
    int                       max_swap_interval;
    int                       default_swap_interval;
 #ifdef HAVE_DRM_PLATFORM
-   struct gbm_dri_device    *gbm_dri;
+   struct gbm_drm_device    *gbm_drm;
 #endif
 
    char                     *device_name;

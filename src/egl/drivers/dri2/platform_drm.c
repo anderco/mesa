@@ -39,6 +39,10 @@
 #include "egl_dri2_fallbacks.h"
 #include "loader.h"
 
+static __DRIimage *
+bo_to_dri_image(struct gbm_bo *bo, struct dri2_egl_display *dri2_dpy,
+                void *loaderPrivate);
+
 static struct gbm_bo *
 lock_front_buffer(struct gbm_surface *surf)
 {
@@ -92,6 +96,7 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
    struct dri2_egl_surface *dri2_surf;
    struct gbm_surface *surf = native_window;
+   void *loaderPrivate;
 
    (void) drv;
 
@@ -117,10 +122,15 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       goto cleanup_surf;
    }
 
+   if (dri2_dpy->gbm_drm->type == GBM_DRM_DRIVER_TYPE_DRI)
+      loaderPrivate = dri2_surf->gbm_surface;
+   else
+      loaderPrivate = dri2_surf;
+
    dri2_surf->dri_drawable =
       (*dri2_dpy->dri2->createNewDrawable) (dri2_dpy->dri_screen,
 					    dri2_conf->dri_double_config,
-					    dri2_surf->gbm_surface);
+					    loaderPrivate);
 
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
@@ -207,7 +217,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    if (dri2_surf->back == NULL)
       return -1;
    if (dri2_surf->back->bo == NULL)
-      dri2_surf->back->bo = gbm_bo_create(&dri2_dpy->gbm_dri->base.base,
+      dri2_surf->back->bo = gbm_bo_create(&dri2_dpy->gbm_drm->base,
 					  surf->width, surf->height,
 					  surf->format, surf->flags);
    if (dri2_surf->back->bo == NULL)
@@ -343,14 +353,14 @@ dri2_drm_image_get_buffers(__DRIdrawable *driDrawable,
                            struct __DRIimageList *buffers)
 {
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
-   struct gbm_dri_bo *bo;
+   struct dri2_egl_display *dri2_dpy =
+      dri2_egl_display(dri2_surf->base.Resource.Display);
 
    if (get_back_bo(dri2_surf) < 0)
       return 0;
 
-   bo = (struct gbm_dri_bo *) dri2_surf->back->bo;
    buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
-   buffers->back = bo->image;
+   buffers->back = bo_to_dri_image(dri2_surf->back->bo, dri2_dpy, NULL);
 
    return 1;
 }
@@ -361,6 +371,13 @@ dri2_drm_flush_front_buffer(__DRIdrawable * driDrawable, void *loaderPrivate)
    (void) driDrawable;
    (void) loaderPrivate;
 }
+
+static const __DRIimageLoaderExtension image_loader_extension = {
+   .base = { __DRI_IMAGE_LOADER, 1 },
+
+   .getBuffers          = dri2_drm_image_get_buffers,
+   .flushFrontBuffer    = dri2_drm_flush_front_buffer,
+};
 
 static EGLBoolean
 dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
@@ -400,12 +417,78 @@ dri2_drm_query_buffer_age(_EGLDriver *drv,
    return dri2_surf->back->age;
 }
 
+static __DRIimage *
+native_gbm_bo_to_dri_image(struct gbm_bo *bo,
+                           struct dri2_egl_display *dri2_dpy,
+                           void *loaderPrivate)
+{
+   __DRIimage *image;
+   struct gbm_drm_bo *drm_bo;
+   int width, height, pitch, format, cpp;
+
+   width = gbm_bo_get_width(bo);
+   height = gbm_bo_get_height(bo);
+
+   switch (gbm_bo_get_format(bo)) {
+   case GBM_FORMAT_RGB565:
+      cpp = 2;
+      format = __DRI_IMAGE_FORMAT_RGB565;
+      break;
+   case GBM_FORMAT_XRGB8888:
+   case GBM_BO_FORMAT_XRGB8888:
+      cpp = 4;
+      format = __DRI_IMAGE_FORMAT_XRGB8888;
+      break;
+   case GBM_BO_FORMAT_ARGB8888:
+   case GBM_FORMAT_ARGB8888:
+      cpp = 4;
+      format = __DRI_IMAGE_FORMAT_ARGB8888;
+      break;
+   default:
+      return NULL;
+   }
+
+   pitch = gbm_bo_get_stride(bo) / cpp;
+
+   drm_bo = (struct gbm_drm_bo *) bo;
+
+   image =
+      dri2_dpy->image->createImageFromHandle(dri2_dpy->dri_screen,
+                                             width, height, format,
+                                             drm_bo->bo, pitch, loaderPrivate);
+
+   return image;
+}
+
+static __DRIimage *
+dri_gbm_bo_to_dri_image(struct gbm_bo *bo, struct dri2_egl_display *dri2_dpy,
+                        void *loaderPrivate)
+{
+   struct gbm_dri_bo *dri_bo = gbm_dri_bo(bo);
+
+   return dri2_dpy->image->dupImage(dri_bo->image, loaderPrivate);
+}
+
+static __DRIimage *
+bo_to_dri_image(struct gbm_bo *bo, struct dri2_egl_display *dri2_dpy,
+                void *loaderPrivate)
+{
+   switch (dri2_dpy->gbm_drm->type) {
+   case GBM_DRM_DRIVER_TYPE_DRI:
+      return dri_gbm_bo_to_dri_image(bo, dri2_dpy, loaderPrivate);
+   case GBM_DRM_DRIVER_TYPE_NATIVE:
+      return native_gbm_bo_to_dri_image(bo, dri2_dpy, loaderPrivate);
+   default:
+      return NULL;
+   }
+}
+
 static _EGLImage *
 dri2_drm_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
                                  EGLClientBuffer buffer, const EGLint *attr_list)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct gbm_dri_bo *dri_bo = gbm_dri_bo((struct gbm_bo *) buffer);
+   struct gbm_bo *bo = (struct gbm_bo *) buffer;
    struct dri2_egl_image *dri2_img;
 
    dri2_img = malloc(sizeof *dri2_img);
@@ -419,7 +502,7 @@ dri2_drm_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
       return NULL;
    }
 
-   dri2_img->dri_image = dri2_dpy->image->dupImage(dri_bo->image, dri2_img);
+   dri2_img->dri_image = bo_to_dri_image(bo, dri2_dpy, dri2_img);
    if (dri2_img->dri_image == NULL) {
       free(dri2_img);
       _eglError(EGL_BAD_ALLOC, "dri2_create_image_khr_pixmap");
@@ -469,11 +552,90 @@ static struct dri2_egl_display_vtbl dri2_drm_display_vtbl = {
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
 };
 
+static EGLBoolean
+dri2_initialize_gbm_dri(_EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+   struct gbm_dri_device *gbm_dri;
+
+   _eglLog(_EGL_DEBUG, "DRM: GBM is using DRI backend");
+
+   gbm_dri = gbm_dri_device(&dri2_dpy->gbm_drm->base);
+
+   dri2_dpy->driver_name = gbm_dri->base.driver_name;
+
+   dri2_dpy->dri_screen = gbm_dri->screen;
+   dri2_dpy->core = gbm_dri->core;
+   dri2_dpy->dri2 = gbm_dri->dri2;
+   dri2_dpy->image = gbm_dri->image;
+   dri2_dpy->flush = gbm_dri->flush;
+   dri2_dpy->driver_configs = gbm_dri->driver_configs;
+
+   gbm_dri->lookup_image = dri2_lookup_egl_image;
+   gbm_dri->lookup_user_data = disp;
+
+   gbm_dri->get_buffers = dri2_drm_get_buffers;
+   gbm_dri->flush_front_buffer = dri2_drm_flush_front_buffer;
+   gbm_dri->get_buffers_with_format = dri2_drm_get_buffers_with_format;
+   gbm_dri->image_get_buffers = dri2_drm_image_get_buffers;
+
+   dri2_setup_screen(disp);
+
+   return EGL_TRUE;
+}
+
+static EGLBoolean
+dri2_initialize_gbm_native(_EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+
+   _eglLog(_EGL_DEBUG, "DRM: GBM is using native backend");
+
+   if (!dri2_dpy->gbm_drm->bufmgr)
+      return EGL_FALSE;
+
+   dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
+   if (!dri2_dpy->driver_name)
+      return EGL_FALSE;
+
+   if (!dri2_load_driver(disp))
+      goto cleanup_driver_name;
+
+   dri2_dpy->shared_bufmgr_extension.base.name = __DRI_SHARED_BUFMGR;
+   dri2_dpy->shared_bufmgr_extension.base.version = 1;
+   dri2_dpy->shared_bufmgr_extension.bufmgr = dri2_dpy->gbm_drm->bufmgr;
+   dri2_dpy->extensions[0] = &image_loader_extension.base;
+   dri2_dpy->extensions[1] = &image_lookup_extension.base;
+   dri2_dpy->extensions[2] = &use_invalidate.base;
+   dri2_dpy->extensions[3] = &dri2_dpy->shared_bufmgr_extension.base;
+   dri2_dpy->extensions[4] = NULL;
+
+   if (!dri2_create_screen(disp))
+      goto cleanup_driver;
+
+   if (dri2_dpy->image->base.version < 9 ||
+       dri2_dpy->image->createImageFromHandle == NULL)
+      goto cleanup_screen;
+
+   return EGL_TRUE;
+
+cleanup_screen:
+   _eglCleanupDisplay(disp);
+   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
+cleanup_driver:
+   dlclose(dri2_dpy->driver);
+cleanup_driver_name:
+   free(dri2_dpy->driver_name);
+
+   return EGL_FALSE;
+}
+
 EGLBoolean
 dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy;
    struct gbm_device *gbm;
+   EGLBoolean ret;
    int fd = -1;
    int i;
 
@@ -504,11 +666,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
       return EGL_FALSE;
    }
 
-   dri2_dpy->gbm_dri = gbm_dri_device(gbm);
-   if (dri2_dpy->gbm_dri->base.type != GBM_DRM_DRIVER_TYPE_DRI) {
-      free(dri2_dpy);
-      return EGL_FALSE;
-   }
+   dri2_dpy->gbm_drm = gbm_drm_device(gbm);
 
    if (fd < 0) {
       fd = dup(gbm_device_get_fd(gbm));
@@ -520,28 +678,25 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_dpy->fd = fd;
    dri2_dpy->device_name = loader_get_device_name_for_fd(dri2_dpy->fd);
-   dri2_dpy->driver_name = dri2_dpy->gbm_dri->base.driver_name;
 
-   dri2_dpy->dri_screen = dri2_dpy->gbm_dri->screen;
-   dri2_dpy->core = dri2_dpy->gbm_dri->core;
-   dri2_dpy->dri2 = dri2_dpy->gbm_dri->dri2;
-   dri2_dpy->image = dri2_dpy->gbm_dri->image;
-   dri2_dpy->flush = dri2_dpy->gbm_dri->flush;
-   dri2_dpy->driver_configs = dri2_dpy->gbm_dri->driver_configs;
+   if (dri2_dpy->gbm_drm->type == GBM_DRM_DRIVER_TYPE_DRI) {
+      ret = dri2_initialize_gbm_dri(disp);
+   } else if (dri2_dpy->gbm_drm->type == GBM_DRM_DRIVER_TYPE_NATIVE) {
+      ret = dri2_initialize_gbm_native(disp);
+   } else {
+      _eglLog(_EGL_FATAL, "Unsupported GBM backend type");
+      ret = EGL_FALSE;
+   }
 
-   dri2_dpy->gbm_dri->lookup_image = dri2_lookup_egl_image;
-   dri2_dpy->gbm_dri->lookup_user_data = disp;
+   if (ret == EGL_FALSE) {
+      free(dri2_dpy);
+      close(fd);
+      return EGL_FALSE;
+   }
 
-   dri2_dpy->gbm_dri->get_buffers = dri2_drm_get_buffers;
-   dri2_dpy->gbm_dri->flush_front_buffer = dri2_drm_flush_front_buffer;
-   dri2_dpy->gbm_dri->get_buffers_with_format = dri2_drm_get_buffers_with_format;
-   dri2_dpy->gbm_dri->image_get_buffers = dri2_drm_image_get_buffers;
-
-   dri2_dpy->gbm_dri->base.base.surface_lock_front_buffer = lock_front_buffer;
-   dri2_dpy->gbm_dri->base.base.surface_release_buffer = release_buffer;
-   dri2_dpy->gbm_dri->base.base.surface_has_free_buffers = has_free_buffers;
-
-   dri2_setup_screen(disp);
+   gbm->surface_lock_front_buffer = lock_front_buffer;
+   gbm->surface_release_buffer = release_buffer;
+   gbm->surface_has_free_buffers = has_free_buffers;
 
    for (i = 0; dri2_dpy->driver_configs[i]; i++) {
       EGLint format, attr_list[3];

@@ -52,4 +52,10 @@ struct gbm_drm_bo {
    void *bo;
 };
 
+static inline struct gbm_drm_device *
+gbm_drm_device(struct gbm_device *gbm)
+{
+   return (struct gbm_drm_device *) gbm;
+}
+
 #endif
