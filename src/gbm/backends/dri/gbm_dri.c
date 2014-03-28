@@ -76,7 +76,7 @@ dri_get_buffers(__DRIdrawable * driDrawable,
       return NULL;
 
    return dri->get_buffers(driDrawable, width, height, attachments,
-                           count, out_count, surf->dri_private);
+                           count, out_count, surf->base.priv);
 }
 
 static void
@@ -86,7 +86,7 @@ dri_flush_front_buffer(__DRIdrawable * driDrawable, void *data)
    struct gbm_dri_device *dri = gbm_dri_device(surf->base.gbm);
 
    if (dri->flush_front_buffer != NULL)
-      dri->flush_front_buffer(driDrawable, surf->dri_private);
+      dri->flush_front_buffer(driDrawable, surf->base.priv);
 }
 
 static __DRIbuffer *
@@ -103,7 +103,7 @@ dri_get_buffers_with_format(__DRIdrawable * driDrawable,
 
    return
       dri->get_buffers_with_format(driDrawable, width, height, attachments,
-                                   count, out_count, surf->dri_private);
+                                   count, out_count, surf->base.priv);
 }
 
 static int
@@ -121,7 +121,7 @@ image_get_buffers(__DRIdrawable *driDrawable,
       return 0;
 
    return dri->image_get_buffers(driDrawable, format, stamp,
-                                 surf->dri_private, buffer_mask, buffers);
+                                 surf->base.priv, buffer_mask, buffers);
 }
 
 static const __DRIuseInvalidateExtension use_invalidate = {

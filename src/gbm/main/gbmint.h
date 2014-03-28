@@ -104,6 +104,8 @@ struct gbm_surface {
    uint32_t height;
    uint32_t format;
    uint32_t flags;
+
+   void *priv;
 };
 
 struct gbm_backend {

@@ -88,8 +88,6 @@ struct gbm_dri_bo {
 
 struct gbm_dri_surface {
    struct gbm_surface base;
-
-   void *dri_private;
 };
 
 static inline struct gbm_dri_device *

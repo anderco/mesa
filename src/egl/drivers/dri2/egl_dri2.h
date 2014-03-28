@@ -235,7 +235,7 @@ struct dri2_egl_surface
 #endif
 
 #ifdef HAVE_DRM_PLATFORM
-   struct gbm_dri_surface *gbm_surf;
+   struct gbm_surface *gbm_surface;
 #endif
 
 #if defined(HAVE_WAYLAND_PLATFORM) || defined(HAVE_DRM_PLATFORM)

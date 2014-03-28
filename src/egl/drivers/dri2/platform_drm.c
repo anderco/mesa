@@ -40,10 +40,9 @@
 #include "loader.h"
 
 static struct gbm_bo *
-lock_front_buffer(struct gbm_surface *_surf)
+lock_front_buffer(struct gbm_surface *surf)
 {
-   struct gbm_dri_surface *surf = (struct gbm_dri_surface *) _surf;
-   struct dri2_egl_surface *dri2_surf = surf->dri_private;
+   struct dri2_egl_surface *dri2_surf = surf->priv;
    struct gbm_bo *bo;
 
    if (dri2_surf->current == NULL) {
@@ -59,10 +58,9 @@ lock_front_buffer(struct gbm_surface *_surf)
 }
 
 static void
-release_buffer(struct gbm_surface *_surf, struct gbm_bo *bo)
+release_buffer(struct gbm_surface *surf, struct gbm_bo *bo)
 {
-   struct gbm_dri_surface *surf = (struct gbm_dri_surface *) _surf;
-   struct dri2_egl_surface *dri2_surf = surf->dri_private;
+   struct dri2_egl_surface *dri2_surf = surf->priv;
    int i;
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
@@ -73,10 +71,9 @@ release_buffer(struct gbm_surface *_surf, struct gbm_bo *bo)
 }
 
 static int
-has_free_buffers(struct gbm_surface *_surf)
+has_free_buffers(struct gbm_surface *surf)
 {
-   struct gbm_dri_surface *surf = (struct gbm_dri_surface *) _surf;
-   struct dri2_egl_surface *dri2_surf = surf->dri_private;
+   struct dri2_egl_surface *dri2_surf = surf->priv;
    int i;
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
@@ -94,8 +91,7 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
    struct dri2_egl_surface *dri2_surf;
-   struct gbm_surface *window = native_window;
-   struct gbm_dri_surface *surf;
+   struct gbm_surface *surf = native_window;
 
    (void) drv;
 
@@ -110,13 +106,12 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 
    switch (type) {
    case EGL_WINDOW_BIT:
-      if (!window)
+      if (!surf)
          return NULL;
-      surf = gbm_dri_surface(window);
-      dri2_surf->gbm_surf = surf;
-      dri2_surf->base.Width =  surf->base.width;
-      dri2_surf->base.Height = surf->base.height;
-      surf->dri_private = dri2_surf;
+      dri2_surf->gbm_surface = surf;
+      dri2_surf->base.Width =  surf->width;
+      dri2_surf->base.Height = surf->height;
+      surf->priv = dri2_surf;
       break;
    default:
       goto cleanup_surf;
@@ -125,7 +120,7 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    dri2_surf->dri_drawable =
       (*dri2_dpy->dri2->createNewDrawable) (dri2_dpy->dri_screen,
 					    dri2_conf->dri_double_config,
-					    dri2_surf->gbm_surf);
+					    dri2_surf->gbm_surface);
 
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
@@ -197,7 +192,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
 {
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
-   struct gbm_dri_surface *surf = dri2_surf->gbm_surf;
+   struct gbm_surface *surf = dri2_surf->gbm_surface;
    int i;
 
    if (dri2_surf->back == NULL) {
@@ -213,8 +208,8 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       return -1;
    if (dri2_surf->back->bo == NULL)
       dri2_surf->back->bo = gbm_bo_create(&dri2_dpy->gbm_dri->base.base,
-					  surf->base.width, surf->base.height,
-					  surf->base.format, surf->base.flags);
+					  surf->width, surf->height,
+					  surf->format, surf->flags);
    if (dri2_surf->back->bo == NULL)
       return -1;
 
