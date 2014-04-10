@@ -186,7 +186,32 @@ static struct gbm_bo *
 gbm_intel_bo_import(struct gbm_device *gbm,
                   uint32_t type, void *buffer, uint32_t usage)
 {
-   return NULL;
+   struct gbm_intel_device *igbm = gbm_intel_device(gbm);
+   struct gbm_import_fd_data *fd_data;
+   struct gbm_intel_bo *ibo;
+   drm_intel_bo *bo;
+
+   if (type != GBM_BO_IMPORT_FD) {
+      errno = ENOSYS;
+      return NULL;
+   }
+
+   fd_data = buffer;
+
+   bo = drm_intel_bo_gem_create_from_prime(igbm->bufmgr, fd_data->fd,
+                                           fd_data->height * fd_data->stride);
+   if (!bo)
+      return NULL;
+
+   ibo = gbm_intel_bo_create_with_bo(gbm, fd_data->width, fd_data->height,
+                                     fd_data->stride, fd_data->format,
+                                     usage, bo);
+   if (!ibo) {
+      drm_intel_bo_unreference(bo);
+      return NULL;
+   }
+
+   return &ibo->base.base;
 }
 
 static int
